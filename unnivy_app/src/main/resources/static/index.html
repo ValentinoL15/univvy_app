@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat Test</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+</head>
+<body>
+<h2>Unnivy Chat Test</h2>
+<div id="messages" style="border: 1px solid #ccc; height: 200px; overflow-y: scroll; margin-bottom: 10px; padding: 10px;"></div>
+
+<input type="text" id="messageInput" placeholder="Escribe un mensaje...">
+<button onclick="sendMessage()">Enviar</button>
+
+<script>
+    let stompClient = null;
+    const roomId = "Valen15_Pepe"; // El ID que acordamos (Username de las personas que se envian mensajes)
+    const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJWQUxFTlRJTk8tU0VDIiwic3ViIjoiVmFsZW4xNSIsImF1dGhvcml0aWVzIjoiUk9MRV9VU0VSIiwiZW1haWxfdmFsaWRhdGlvbiI6dHJ1ZSwiaWF0IjoxNzY3MDI0NDMxLCJleHAiOjE3NjcxMTA4MzEsImp0aSI6ImRiZWRjZDY0LTI4MDctNDNjOC1iNWUyLTI1ZmFjN2IzNTJiMSIsIm5iZiI6MTc2NzAyNDQzMX0._BSdMD0o2TpTatAYYt0HY5yOYtdgOVQ0QxBlexyEK7w"; // Pega aquí un token válido de tu micro de Auth
+
+    function connect() {
+        const socket = new SockJS('http://localhost:8080/ws');
+        stompClient = Stomp.over(socket);
+
+        const headers = {
+            'Authorization': `Bearer ${token}`
+        };
+
+        stompClient.connect(headers, function (frame) {
+            console.log('Conectado: ' + frame);
+
+            // Suscribirse a la sala
+            stompClient.subscribe('/topic/' + roomId, function (response) {
+                const msg = JSON.parse(response.body);
+                showChatMessage(msg);
+            });
+        }, function (error) {
+            console.error('Error de STOMP: ' + error);
+        });
+    }
+
+    function sendMessage() {
+        const content = document.getElementById('messageInput').value;
+        if (content && stompClient) {
+            const chatMessage = {
+                content: content,
+                sender: "Yo" // El backend lo pisará con el Principal.getName()
+            };
+            stompClient.send("/app/chat/" + roomId, {}, JSON.stringify(chatMessage));
+            document.getElementById('messageInput').value = '';
+        }
+    }
+
+    function showChatMessage(message) {
+        const messagesDiv = document.getElementById('messages');
+        messagesDiv.innerHTML += `<p><strong>${message.sender}:</strong> ${message.content}</p>`;
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    // Iniciar conexión al cargar
+    connect();
+</script>
+</body>
+</html>
